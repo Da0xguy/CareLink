@@ -1,0 +1,8 @@
+{
+  "name": "CareLink: Unified National Healthcare Platform",
+  "description": "A secure full-stack national healthcare system providing unique patient IDs, patient-controlled consent and records access, automated appointment booking, real-time doctor \u0026 admin panels, and an integrated AI medical assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
