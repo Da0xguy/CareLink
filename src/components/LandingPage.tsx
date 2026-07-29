@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   ShieldCheck, 
   Smartphone, 
@@ -141,16 +142,7 @@ export default function LandingPage({ onBypassRole, onNavigatePortal, onNavigate
       >
         <div className="max-w-7xl mx-auto flex justify-between items-center w-full">
           <div className="flex items-center gap-3">
-            <motion.div 
-              whileHover={{ scale: 1.05, rotate: 3 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm cursor-pointer"
-            >
-              <ShieldCheck className="w-5.5 h-5.5" />
-            </motion.div>
-            <div>
-              <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">CareLink</span>
-            </div>
+            <CareLinkLogo size="md" showSubtitle />
           </div>
 
           <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
