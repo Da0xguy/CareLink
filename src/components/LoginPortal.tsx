@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   ShieldCheck, 
   User, 
@@ -125,9 +126,9 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
           <ShieldCheck className="w-4 h-4 text-blue-600 animate-pulse" />
           Federal Republic of Nigeria • Unified Health Portal
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-2">
-          CareLink
-        </h1>
+        <div className="flex justify-center mb-2">
+          <CareLinkLogo size="xl" showSubtitle />
+        </div>
         <p className="mt-2 text-sm text-slate-500">
           Unified Health Records & Secure Cryptographic Patient Management
         </p>
