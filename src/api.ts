@@ -22,10 +22,13 @@ async function safeFetch<T>(
   try {
     const res = await fetch(url, options);
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
+      const errorData = await res.json().catch(() => null);
+      if (errorData && typeof errorData === 'object' && ('message' in errorData || 'success' in errorData)) {
+        return errorData as T;
+      }
       console.warn(`API call to ${url} returned status ${res.status}`);
       if (fallback !== undefined) return fallback;
-      throw new Error(errorData.message || `Request failed with status ${res.status}`);
+      throw new Error((errorData && errorData.message) || `Request failed with status ${res.status}`);
     }
     return (await res.json()) as T;
   } catch (err: any) {

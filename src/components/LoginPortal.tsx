@@ -9,7 +9,9 @@ import {
   Smartphone, 
   Sparkles, 
   ArrowRight,
-  Fingerprint
+  Fingerprint,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { api } from '../api';
 
@@ -22,6 +24,8 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
   const [role, setRole] = useState<'patient' | 'doctor' | 'lab' | 'admin' | 'reception'>('patient');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Registration state
   const [isRegistering, setIsRegistering] = useState(initialRegister);
@@ -68,14 +72,16 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
     setError('');
     try {
       const response = await api.login({ email, password, role });
-      if (response.success) {
-        if (response.user.mfaEnabled || role === 'patient' || role === 'doctor') {
+      if (response && response.success) {
+        if (response.user?.mfaEnabled || role === 'patient' || role === 'doctor') {
           // Trigger MFA check for safety simulation
           setPendingUser(response.user);
           setShowMfa(true);
         } else {
           onLoginSuccess(role, response.user);
         }
+      } else {
+        setError(response?.message || 'Login failed. Please check your credentials and try again.');
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify credentials.');
@@ -189,19 +195,19 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                      Email Address
+                      Email Address or National Patient ID
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <User className="w-4 h-4" />
                       </div>
                       <input
-                        type="email"
+                        type="text"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="e.g. samuel@example.com"
+                        placeholder="e.g. samuel@example.com or NID-105-882"
                       />
                     </div>
                   </div>
@@ -215,13 +221,21 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full pl-10 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="••••••••"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer focus:outline-none"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
 
@@ -432,14 +446,24 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                         Account Password
                       </label>
-                      <input
-                        type="password"
-                        required
-                        value={regPassword}
-                        onChange={(e) => setRegPassword(e.target.value)}
-                        className="block w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
-                        placeholder="••••••••"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showRegPassword ? "text" : "password"}
+                          required
+                          value={regPassword}
+                          onChange={(e) => setRegPassword(e.target.value)}
+                          className="block w-full px-3 pr-9 py-2 border border-slate-200 rounded-xl text-sm"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegPassword(!showRegPassword)}
+                          className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer focus:outline-none"
+                          aria-label={showRegPassword ? "Hide password" : "Show password"}
+                        >
+                          {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
