@@ -12,6 +12,7 @@ import {
   doc, 
   setDoc
 } from 'firebase/firestore';
+import firebaseConfig from './firebase-applet-config.json';
 import { 
   PatientProfile, 
   DoctorProfile, 
@@ -35,6 +36,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -43,18 +45,25 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
+
+  // Normalize body if it came as a string from serverless wrappers
+  if (typeof req.body === 'string' && req.body.trim().startsWith('{')) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      // Keep as string if parsing fails
+    }
+  }
   next();
 });
 
 // Initialize Firebase App & Firestore Database
 let db: ReturnType<typeof getFirestore> | null = null;
 try {
-  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-  if (fs.existsSync(configPath)) {
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    const fbApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-    db = getFirestore(fbApp, firebaseConfig.firestoreDatabaseId || '(default)');
-    console.log('[Firebase] Connected to Firestore database:', firebaseConfig.projectId);
+  if (firebaseConfig && (firebaseConfig as any).projectId) {
+    const fbApp = !getApps().length ? initializeApp(firebaseConfig as any) : getApp();
+    db = getFirestore(fbApp, (firebaseConfig as any).firestoreDatabaseId || '(default)');
+    console.log('[Firebase] Connected to Firestore database:', (firebaseConfig as any).projectId);
   }
 } catch (err) {
   console.error('[Firebase] Error initializing Firestore:', err);
