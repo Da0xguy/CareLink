@@ -782,71 +782,80 @@ initFirestoreCollections();
 // AUTH
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    const cleanEmail = (email || '').trim().toLowerCase();
+    const { email, password, role } = req.body || {};
+    const cleanEmail = String(email || '').trim().toLowerCase();
+
+    if (!role || !cleanEmail) {
+      return res.status(400).json({ success: false, message: 'Email and role are required for login.' });
+    }
+
+    const findByEmailOrId = <T extends { email?: string; id?: string }>(list: T[]) =>
+      list.find(item =>
+        Boolean(item.email && item.email.toLowerCase() === cleanEmail) ||
+        Boolean(item.id && item.id.toLowerCase() === cleanEmail)
+      );
+
+    const validatePassword = (storedPassword?: string) => {
+      if (!storedPassword) return true;
+      return password === storedPassword || password === '123' || password === '123456';
+    };
 
     if (role === 'patient') {
-      let patient = patients.find(p => 
-        (p.email && p.email.toLowerCase() === cleanEmail) || 
-        (p.id && p.id.toLowerCase() === cleanEmail) || 
-        cleanEmail === 'samuel@example.com'
-      );
-      
-      // Fallback: if user enters any dummy email not in DB, fallback to default patient so dummy login never fails
-      if (!patient && patients.length > 0) {
-        patient = patients[0];
+      let patient = findByEmailOrId(patients) || patients[0];
+      if (!patient) {
+        return res.status(401).json({ success: false, message: 'Patient account not found.' });
       }
-
-      if (patient) {
-        if (patient.password && password && patient.password !== password && password !== '123' && password !== '123456') {
-          return res.status(401).json({ success: false, message: "Incorrect password for this patient account." });
-        }
-        return res.json({ success: true, role, user: patient });
+      if (!validatePassword((patient as any).password)) {
+        return res.status(401).json({ success: false, message: 'Incorrect password for this patient account.' });
       }
-    } else if (role === 'doctor') {
-      let doc = doctors.find(d => 
-        (d.email && d.email.toLowerCase() === cleanEmail) || 
-        (d.id && d.id.toLowerCase() === cleanEmail) || 
-        cleanEmail === 'johnson@hospital.org'
-      );
-
-      // Fallback: if user enters any dummy email for doctor, fallback to default doctor
-      if (!doc && doctors.length > 0) {
-        doc = doctors[0];
-      }
-
-      if (doc) {
-        if (doc.status === 'revoked') {
-          return res.status(403).json({ success: false, message: "Doctor access revoked by facility administrator. Contact credentials office." });
-        }
-        if (doc.status === 'pending_confirmation') {
-          return res.status(403).json({ success: false, message: "Account pending email confirmation. Please check confirmation email to set password." });
-        }
-        if (doc.password && password && doc.password !== password && password !== '123' && password !== '123456') {
-          return res.status(401).json({ success: false, message: "Incorrect password for doctor account." });
-        }
-        return res.json({ success: true, role, user: doc });
-      }
-    } else if (role === 'lab') {
-      const staff = labStaff.find(s => s.email && s.email.toLowerCase() === cleanEmail) || labStaff[0];
-      if (staff) {
-        return res.json({ success: true, role, user: staff });
-      }
-    } else if (role === 'admin') {
-      const admin = admins.find(a => a.email && a.email.toLowerCase() === cleanEmail) || admins[0];
-      if (admin) {
-        return res.json({ success: true, role, user: admin });
-      }
-    } else if (role === 'reception') {
-      const staff = receptionStaff.find(r => r.email && r.email.toLowerCase() === cleanEmail) || receptionStaff[0];
-      if (staff) {
-        return res.json({ success: true, role, user: staff });
-      }
+      return res.json({ success: true, role, user: patient });
     }
-    res.status(401).json({ success: false, message: "Invalid credentials or missing account matching email/ID." });
+
+    if (role === 'doctor') {
+      let doctor = findByEmailOrId(doctors) || doctors[0];
+      if (!doctor) {
+        return res.status(401).json({ success: false, message: 'Doctor account not found.' });
+      }
+      if ((doctor as any).status === 'revoked') {
+        return res.status(403).json({ success: false, message: 'Doctor access revoked by facility administrator. Contact credentials office.' });
+      }
+      if ((doctor as any).status === 'pending_confirmation') {
+        return res.status(403).json({ success: false, message: 'Account pending email confirmation. Please check confirmation email to set password.' });
+      }
+      if (!validatePassword((doctor as any).password)) {
+        return res.status(401).json({ success: false, message: 'Incorrect password for doctor account.' });
+      }
+      return res.json({ success: true, role, user: doctor });
+    }
+
+    if (role === 'lab') {
+      const staff = findByEmailOrId(labStaff) || labStaff[0];
+      if (!staff) {
+        return res.status(401).json({ success: false, message: 'Lab staff account not found.' });
+      }
+      return res.json({ success: true, role, user: staff });
+    }
+
+    if (role === 'admin') {
+      const admin = findByEmailOrId(admins) || admins[0];
+      if (!admin) {
+        return res.status(401).json({ success: false, message: 'Administrator account not found.' });
+      }
+      return res.json({ success: true, role, user: admin });
+    }
+
+    if (role === 'reception') {
+      const staff = findByEmailOrId(receptionStaff) || receptionStaff[0];
+      if (!staff) {
+        return res.status(401).json({ success: false, message: 'Reception staff account not found.' });
+      }
+      return res.json({ success: true, role, user: staff });
+    }
+
+    res.status(400).json({ success: false, message: 'Invalid login role provided.' });
   } catch (err: any) {
     console.error('[Login Auth Error]', err);
-    res.status(500).json({ success: false, message: "Authentication server error: " + (err.message || "Unknown error") });
+    res.status(500).json({ success: false, message: 'Authentication server error: ' + (err?.message || 'Unknown error') });
   }
 });
 
