@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   Users, 
   Calendar, 
@@ -513,13 +514,7 @@ export default function DoctorDashboard({ doctor, onLogout }: DoctorDashboardPro
       <aside className="hidden md:flex w-64 bg-white text-slate-700 flex-col justify-between shrink-0 border-r border-slate-200 h-screen overflow-y-auto">
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 rounded-xl text-white font-extrabold shadow-sm">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-slate-900 text-md tracking-tight">CareLink Portal</h2>
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Clinician Division</p>
-            </div>
+            <CareLinkLogo size="md" showSubtitle />
           </div>
 
           <div className="bg-slate-100 p-4 rounded-2xl text-xs space-y-1 border border-slate-200/40">
@@ -599,15 +594,7 @@ export default function DoctorDashboard({ doctor, onLogout }: DoctorDashboardPro
           >
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-600 rounded-xl text-white font-extrabold shadow-sm">
-                    <Stethoscope className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="font-extrabold text-slate-900 text-sm tracking-tight">CareLink Portal</h2>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Clinician Division</p>
-                  </div>
-                </div>
+                <CareLinkLogo size="sm" showSubtitle />
                 <button 
                   onClick={() => setMobileSidebarOpen(false)}
                   className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"

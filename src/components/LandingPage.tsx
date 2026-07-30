@@ -317,7 +317,7 @@ export default function LandingPage({ onBypassRole, onNavigatePortal, onNavigate
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => onBypassRole('patient')}
+                  onClick={() => onNavigatePortal(false)}
                   className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs px-7 py-3.5 rounded-xl transition-all shadow-md shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>Launch Patient Dashboard</span>

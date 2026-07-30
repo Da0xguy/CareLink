@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   Home, 
   Calendar, 
@@ -718,13 +719,8 @@ This clinical report is an official medical document generated for printing and 
               {mobileSidebarOpen ? <X className="w-5 h-5 text-slate-700" /> : <Menu className="w-5 h-5 text-slate-700" />}
             </button>
 
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white text-base shadow-sm shadow-blue-500/20 shrink-0">
-              C
-            </div>
-            <div className="hidden sm:block">
-              <h2 className="text-sm font-black text-slate-900 tracking-tight leading-tight">CareLink</h2>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Patient Health Portal</p>
-            </div>
+            <CareLinkLogo size="md" showSubtitle />
+
             <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
             <div className="flex items-center gap-2">
               {patient.avatarUrl ? (
@@ -825,15 +821,7 @@ This clinical report is an official medical document generated for printing and 
               className="bg-white w-72 h-full p-5 flex flex-col space-y-4 shadow-2xl border-r border-slate-200 overflow-y-auto animate-in slide-in-from-left duration-200"
             >
               <div className="flex justify-between items-center pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center font-black text-white text-sm">
-                    C
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black text-slate-900">CareLink Menu</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">Patient Navigation</p>
-                  </div>
-                </div>
+                <CareLinkLogo size="sm" showSubtitle />
                 <button 
                   onClick={() => setMobileSidebarOpen(false)}
                   className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
@@ -2176,19 +2164,27 @@ This clinical report is an official medical document generated for printing and 
         patient={localPatient}
         isOpen={showBooking}
         onClose={() => setShowBooking(false)}
-        onBookingConfirmed={(newApt) => {
-          setAppointments(prev => [newApt, ...prev]);
-          api.bookAppointment({
-            patientId: localPatient.id,
-            patientName: localPatient.name,
-            doctorId: newApt.doctorId,
-            doctorName: newApt.doctorName,
-            specialty: newApt.specialty,
-            hospitalName: newApt.hospitalName,
-            date: newApt.date,
-            time: newApt.time,
-            department: `${newApt.specialty} Dept`
-          }).catch(console.error);
+        onBookingConfirmed={async (newApt) => {
+          try {
+            const res = await api.bookAppointment({
+              patientId: localPatient.id,
+              patientName: localPatient.name,
+              doctorId: newApt.doctorId,
+              doctorName: newApt.doctorName,
+              specialty: newApt.specialty,
+              hospitalName: newApt.hospitalName,
+              date: newApt.date,
+              time: newApt.time,
+              department: `${newApt.specialty} Dept`
+            });
+            if (res && res.appointment) {
+              setAppointments(prev => [res.appointment, ...prev.filter(a => a.id !== newApt.id)]);
+            } else {
+              setAppointments(prev => [newApt, ...prev]);
+            }
+          } catch (e) {
+            setAppointments(prev => [newApt, ...prev]);
+          }
         }}
       />
 

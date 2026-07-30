@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CareLinkLogo } from './CareLinkLogo';
 import {
   LayoutDashboard,
   Calendar,
@@ -87,6 +88,7 @@ export default function ReceptionDashboard({ receptionist, onLogout }: Reception
 
   // Toast banner
   const [toastMessage, setToastMessage] = useState<{ title: string; message: string; type: 'success' | 'info' } | null>(null);
+  const prevAptsCountRef = React.useRef<number | null>(null);
 
   const showToast = (title: string, message: string, type: 'success' | 'info' = 'success') => {
     setToastMessage({ title, message, type });
@@ -106,7 +108,17 @@ export default function ReceptionDashboard({ receptionist, onLogout }: Reception
         api.getNotifications(),
         api.getRegisteredHospitals()
       ]);
-      setAppointments(aptsData || []);
+      const loadedApts = aptsData || [];
+      
+      if (prevAptsCountRef.current !== null && loadedApts.length > prevAptsCountRef.current) {
+        const latest = loadedApts[0];
+        if (latest) {
+          showToast("New Appointment Booked", `${latest.patientName} scheduled with ${latest.doctorName} (${latest.department}).`);
+        }
+      }
+      prevAptsCountRef.current = loadedApts.length;
+
+      setAppointments(loadedApts);
       setDepartments(deptsData || []);
       setDoctors(docsData || []);
       setNotifications(notifsData || []);
@@ -279,9 +291,8 @@ export default function ReceptionDashboard({ receptionist, onLogout }: Reception
       {/* Top Navbar */}
       <header className="bg-slate-900 text-white px-6 py-3 flex items-center justify-between border-b border-slate-800 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-xl text-white shadow-sm">
-            <Building className="w-5 h-5" />
-          </div>
+          <CareLinkLogo variant="dark" size="md" showSubtitle />
+          <div className="h-6 w-px bg-slate-800 mx-1 hidden sm:block"></div>
           <div>
             <div className="flex items-center gap-2">
               {registeredHospitals.length > 0 ? (
@@ -487,32 +498,39 @@ export default function ReceptionDashboard({ receptionist, onLogout }: Reception
         {/* Main Content Pane */}
         <main className="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50">
 
-          {/* Toast Notification Banner */}
+          {/* Toast Notification Banner - Fixed Top Right */}
           <AnimatePresence>
             {toastMessage && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className={`p-3.5 rounded-xl shadow-md border flex items-center justify-between ${
-                  toastMessage.type === 'success' 
-                    ? 'bg-emerald-900 text-emerald-100 border-emerald-700' 
-                    : 'bg-blue-900 text-blue-100 border-blue-700'
-                }`}
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="fixed top-5 right-5 z-50 max-w-sm w-full pointer-events-auto"
               >
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider">{toastMessage.title}</p>
-                    <p className="text-xs font-medium">{toastMessage.message}</p>
+                <div className={`p-4 rounded-xl shadow-2xl border flex items-start justify-between backdrop-blur-md ${
+                  toastMessage.type === 'success' 
+                    ? 'bg-slate-900/95 text-emerald-100 border-emerald-500/40 shadow-emerald-950/20' 
+                    : 'bg-slate-900/95 text-blue-100 border-blue-500/40 shadow-blue-950/20'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${
+                      toastMessage.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-white">{toastMessage.title}</p>
+                      <p className="text-xs font-medium text-slate-300 mt-0.5 leading-relaxed">{toastMessage.message}</p>
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => setToastMessage(null)}
+                    className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0 ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setToastMessage(null)}
-                  className="text-slate-300 hover:text-white p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </motion.div>
             )}
           </AnimatePresence>

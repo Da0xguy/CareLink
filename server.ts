@@ -1033,25 +1033,37 @@ app.get('/api/appointments', (req, res) => {
 });
 
 app.post('/api/appointments/book', (req, res) => {
-  const { patientId, doctorId, date, time, department, hospitalName } = req.body;
+  const { patientId, doctorId, doctorName, date, time, department, hospitalName, symptoms } = req.body;
   const patient = patients.find(p => p.id === patientId) || patients[0];
-  const doctor = doctors.find(d => d.id === doctorId) || doctors[0];
+  
+  let doctor = doctors.find(d => d.id === doctorId || (doctorName && d.name.toLowerCase().includes(doctorName.toLowerCase())));
+  if (!doctor && department) {
+    const cleanDept = department.replace(' Dept', '').toLowerCase();
+    doctor = doctors.find(d => d.department.toLowerCase().includes(cleanDept));
+  }
+  if (!doctor) doctor = doctors[0];
   
   const newAppointment: Appointment = {
-    id: `APT-${Math.floor(1000 + Math.random() * 9000)}`,
+    id: `APT-${Math.floor(10000 + Math.random() * 90000)}`,
     patientId: patient.id,
     patientName: patient.name,
     doctorId: doctor.id,
     doctorName: doctor.name,
-    specialty: doctor.specialty,
-    hospitalName: hospitalName || doctor.hospitalName,
-    department: department || doctor.department,
-    date,
-    time,
-    status: 'pending'
+    specialty: doctor.specialty || department || "General Practice",
+    hospitalName: hospitalName || doctor.hospitalName || "General Hospital Abuja",
+    department: department || doctor.department || "General Medicine",
+    date: date || "Today",
+    time: time || "10:00 AM",
+    status: 'pending',
+    symptoms: symptoms || "Routine consultation & health checkup",
+    patientNid: patient.id,
+    patientPhone: patient.phone,
+    patientAge: patient.age,
+    patientGender: patient.gender,
+    patientBloodGroup: patient.bloodGroup
   };
   
-  appointments.push(newAppointment);
+  appointments.unshift(newAppointment);
 
   // AUTOMATICALLY GRANT HOSPITAL TREATMENT ACCESS UNTIL REVOKED
   const targetHospital = hospitalName || doctor.hospitalName || "General Hospital Abuja";

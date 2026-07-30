@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   FlaskConical, 
   Search, 
@@ -150,12 +151,10 @@ export default function LabDashboard({ labStaff, onLogout }: LabDashboardProps) 
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-100">
-              <FlaskConical className="w-6 h-6" />
-            </div>
+            <CareLinkLogo size="md" showSubtitle />
+            <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-slate-900 text-lg tracking-tight">Diagnostic Laboratory Portal</h1>
                 <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full">
                   Central Diagnostic Hub
                 </span>

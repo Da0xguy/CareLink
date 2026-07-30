@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CareLinkLogo } from './CareLinkLogo';
 import { 
   ShieldCheck, 
   Building, 
@@ -70,13 +71,7 @@ export default function RegisterFacilityPage({ onBackToLanding }: RegisterFacili
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-6 py-4 shadow-3xs">
         <div className="max-w-7xl mx-auto flex justify-between items-center w-full">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm">
-              <ShieldCheck className="w-5.5 h-5.5" />
-            </div>
-            <div>
-              <span className="text-lg font-black tracking-tight text-slate-900 block leading-tight">CareLink</span>
-              <span className="text-[9px] block font-mono text-slate-400 font-bold leading-none tracking-wider">INTEGRATED CLINICAL NETWORK</span>
-            </div>
+            <CareLinkLogo size="md" showSubtitle />
           </div>
 
           <button 
