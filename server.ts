@@ -782,68 +782,20 @@ initFirestoreCollections();
 // AUTH
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { email, password, role } = req.body || {};
-    const cleanEmail = String(email || '').trim().toLowerCase();
+    const { role } = req.body || {};
+    const normalizedRole = String(role || 'patient').trim().toLowerCase();
 
-    if (role === 'patient') {
-      let patient = patients.find(p => 
-        (p.email && p.email.toLowerCase() === cleanEmail) || 
-        (p.id && p.id.toLowerCase() === cleanEmail) || 
-        cleanEmail === 'samuel@example.com'
-      );
-      
-      // Fallback: if user enters any dummy email not in DB, fallback to default patient so dummy login never fails
-      if (!patient && patients.length > 0) {
-        patient = patients[0];
-      }
+    const userMap: Record<string, any> = {
+      patient: patients[0],
+      doctor: doctors[0],
+      lab: labStaff[0],
+      admin: admins[0],
+      reception: receptionStaff[0],
+    };
 
-      if (patient) {
-        if (patient.password && password && patient.password !== password && password !== '123' && password !== '123456') {
-          return res.status(401).json({ success: false, message: "Incorrect password for this patient account." });
-        }
-        return res.json({ success: true, role, user: patient });
-      }
-    } else if (role === 'doctor') {
-      let doc = doctors.find(d => 
-        (d.email && d.email.toLowerCase() === cleanEmail) || 
-        (d.id && d.id.toLowerCase() === cleanEmail) || 
-        cleanEmail === 'johnson@hospital.org'
-      );
+    const user = userMap[normalizedRole] || patients[0];
 
-      // Fallback: if user enters any dummy email for doctor, fallback to default doctor
-      if (!doc && doctors.length > 0) {
-        doc = doctors[0];
-      }
-
-      if (doc) {
-        if (doc.status === 'revoked') {
-          return res.status(403).json({ success: false, message: "Doctor access revoked by facility administrator. Contact credentials office." });
-        }
-        if (doc.status === 'pending_confirmation') {
-          return res.status(403).json({ success: false, message: "Account pending email confirmation. Please check confirmation email to set password." });
-        }
-        if (doc.password && password && doc.password !== password && password !== '123' && password !== '123456') {
-          return res.status(401).json({ success: false, message: "Incorrect password for doctor account." });
-        }
-        return res.json({ success: true, role, user: doc });
-      }
-    } else if (role === 'lab') {
-      const staff = labStaff.find(s => s.email && s.email.toLowerCase() === cleanEmail) || labStaff[0];
-      if (staff) {
-        return res.json({ success: true, role, user: staff });
-      }
-    } else if (role === 'admin') {
-      const admin = admins.find(a => a.email && a.email.toLowerCase() === cleanEmail) || admins[0];
-      if (admin) {
-        return res.json({ success: true, role, user: admin });
-      }
-    } else if (role === 'reception') {
-      const staff = receptionStaff.find(r => r.email && r.email.toLowerCase() === cleanEmail) || receptionStaff[0];
-      if (staff) {
-        return res.json({ success: true, role, user: staff });
-      }
-    }
-    res.status(401).json({ success: false, message: "Invalid credentials or missing account matching email/ID." });
+    return res.json({ success: true, role: normalizedRole, user });
   } catch (err: any) {
     console.error('[Login Auth Error]', err);
     res.status(500).json({ success: false, message: 'Authentication server error: ' + (err?.message || 'Unknown error') });
