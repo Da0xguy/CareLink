@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Patient": {
+      "collectionName": "patients",
+      "fields": {
+        "id": { "type": "string", "description": "National Patient ID" },
+        "name": { "type": "string", "description": "Patient Full Name" },
+        "email": { "type": "string", "description": "Patient Email Address" },
+        "phone": { "type": "string", "description": "Phone Number" },
+        "age": { "type": "number", "description": "Age" },
+        "bloodGroup": { "type": "string", "description": "Blood Group" },
+        "allergies": { "type": "array", "description": "List of allergies" },
+        "mfaEnabled": { "type": "boolean", "description": "MFA Status" },
+        "password": { "type": "string", "description": "Account Password" },
+        "pin": { "type": "string", "description": "Security PIN" }
+      }
+    },
+    "Doctor": {
+      "collectionName": "doctors",
+      "fields": {
+        "id": { "type": "string", "description": "Doctor ID" },
+        "name": { "type": "string", "description": "Doctor Full Name" },
+        "email": { "type": "string", "description": "Doctor Email" },
+        "specialty": { "type": "string", "description": "Specialty" },
+        "department": { "type": "string", "description": "Department Name" },
+        "status": { "type": "string", "description": "Account Status" },
+        "password": { "type": "string", "description": "Password" },
+        "pin": { "type": "string", "description": "Security PIN" }
+      }
+    },
+    "Department": {
+      "collectionName": "departments",
+      "fields": {
+        "id": { "type": "string", "description": "Department ID" },
+        "name": { "type": "string", "description": "Department Name" },
+        "email": { "type": "string", "description": "Admin Email" },
+        "description": { "type": "string", "description": "Description" }
+      }
+    },
+    "Appointment": {
+      "collectionName": "appointments",
+      "fields": {
+        "id": { "type": "string", "description": "Appointment ID" },
+        "patientId": { "type": "string", "description": "Patient ID" },
+        "doctorId": { "type": "string", "description": "Doctor ID" },
+        "date": { "type": "string", "description": "Appointment Date" },
+        "time": { "type": "string", "description": "Appointment Time" },
+        "status": { "type": "string", "description": "Status" }
+      }
+    }
+  }
+}

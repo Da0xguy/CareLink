@@ -68,15 +68,19 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
   const [docEmail, setDocEmail] = useState('');
   const [docPhone, setDocPhone] = useState('');
 
-  // Generated Credentials Display
+  // Generated Credentials & Confirmation Link Display
   const [generatedCredentials, setGeneratedCredentials] = useState<{
     docId: string;
     tempPass: string;
     docName: string;
+    email: string;
+    confirmationLink?: string;
+    message?: string;
   } | null>(null);
 
   // New Department Form extended fields
   const [deptName, setDeptName] = useState('');
+  const [deptEmail, setDeptEmail] = useState('');
   const [deptDesc, setDeptDesc] = useState('');
   const [deptFee, setDeptFee] = useState('5000');
   const [deptLead, setDeptLead] = useState('');
@@ -157,7 +161,7 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
     e.preventDefault();
     if (!docName || !docEmail) return;
     try {
-      const response = await api.createDoctor({
+      const response = await api.adminCreateDoctor({
         name: docName,
         email: docEmail,
         phone: docPhone,
@@ -166,9 +170,12 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
       });
       if (response.success) {
         setGeneratedCredentials({
-          docId: response.generatedId,
-          tempPass: response.tempPassword,
-          docName: response.doctor.name
+          docId: response.doctor.id,
+          tempPass: response.doctor.tempPassword || 'Set via confirmation link',
+          docName: response.doctor.name,
+          email: response.doctor.email,
+          confirmationLink: response.confirmationLink,
+          message: response.message
         });
         // Reset inputs
         setDocName('');
@@ -176,8 +183,8 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
         setDocPhone('');
         loadData();
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(err.message || "Failed to create doctor account");
     }
   };
 
@@ -194,10 +201,11 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
 
   const handleCreateDept = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deptName) return;
+    if (!deptName || !deptEmail) return;
     try {
-      const response = await api.createDepartment({
+      const response = await api.adminCreateDepartment({
         name: deptName,
+        email: deptEmail,
         description: deptDesc,
         consultationFee: deptFee,
         leadDoctor: deptLead,
@@ -206,15 +214,16 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
         maxDailySlots: deptSlots
       });
       if (response.success) {
-        alert(`Department Portal "${response.department.name}" provisioned successfully.`);
+        alert(`Department Portal "${response.department.name}" created. An account confirmation link has been sent to ${deptEmail}. Link: ${response.confirmationLink}`);
         setDeptName('');
+        setDeptEmail('');
         setDeptDesc('');
         setDeptFee('5000');
         setDeptLead('');
         loadData();
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      alert(err.message || "Failed to create department account");
     }
   };
 
@@ -618,20 +627,32 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                 <div className="bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-2xl p-4.5 text-xs space-y-2.5">
                   <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
                     <CheckCircle className="w-4.5 h-4.5 text-emerald-600" />
-                    <span>Specialist Accredited!</span>
+                    <span>Specialist Account Provisioned!</span>
                   </div>
-                  <p className="font-medium text-slate-700">Account successfully provisioned for <strong>{generatedCredentials.docName}</strong>.</p>
+                  <p className="font-medium text-slate-700">Confirmation email dispatched to <strong>{generatedCredentials.email}</strong> for <strong>{generatedCredentials.docName}</strong>.</p>
                   
-                  <div className="bg-white border border-emerald-100 p-2.5 rounded-xl space-y-1.5 font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400 uppercase text-[9px] font-bold">Unique Doc ID:</span>
+                  <div className="bg-white border border-emerald-100 p-3 rounded-xl space-y-2">
+                    <div className="flex justify-between font-mono">
+                      <span className="text-slate-400 uppercase text-[9px] font-bold">Unique Doctor ID:</span>
                       <span className="text-blue-700 font-bold">{generatedCredentials.docId}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400 uppercase text-[9px] font-bold">Temporary Password:</span>
-                      <span className="text-slate-800 font-bold">{generatedCredentials.tempPass}</span>
-                    </div>
+                    {generatedCredentials.confirmationLink && (
+                      <div className="space-y-1 pt-1 border-t border-slate-100">
+                        <span className="text-slate-400 uppercase text-[9px] font-bold block">Activation Confirmation Link:</span>
+                        <a 
+                          href={generatedCredentials.confirmationLink} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="text-blue-600 underline font-mono text-[10px] break-all block hover:text-blue-800"
+                        >
+                          {generatedCredentials.confirmationLink}
+                        </a>
+                      </div>
+                    )}
                   </div>
+                  <p className="text-[10px] text-emerald-800 font-semibold">
+                    The doctor will set their custom account password & 4-digit security PIN via this confirmation link.
+                  </p>
                 </div>
               )}
             </div>
@@ -725,6 +746,19 @@ export default function AdminDashboard({ admin, onLogout }: AdminDashboardProps)
                     onChange={(e) => setDeptName(e.target.value)}
                     className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-bold"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-slate-600 font-bold mb-1">Department Admin Email *</label>
+                  <input 
+                    type="email" 
+                    required 
+                    placeholder="dept.pediatrics@ghabuja.org" 
+                    value={deptEmail}
+                    onChange={(e) => setDeptEmail(e.target.value)}
+                    className="w-full p-2.5 border border-slate-200 rounded-xl text-xs font-medium"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">Confirmation email with password setup link will be dispatched here.</p>
                 </div>
 
                 <div>

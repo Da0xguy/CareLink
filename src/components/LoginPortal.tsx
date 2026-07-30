@@ -31,6 +31,8 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
   const [regAge, setRegAge] = useState('27');
   const [regBlood, setRegBlood] = useState('O+');
   const [regAllergies, setRegAllergies] = useState('');
+  const [regPassword, setRegPassword] = useState('123456');
+  const [regPin, setRegPin] = useState('1234');
 
   // MFA Flow state
   const [showMfa, setShowMfa] = useState(false);
@@ -96,11 +98,14 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
         role: 'patient',
         age: regAge,
         bloodGroup: regBlood,
-        allergies: regAllergies
+        allergies: regAllergies,
+        password: regPassword,
+        pin: regPin
       });
       if (response.success) {
-        setSuccessMsg(`Registration Successful! Unique Patient ID issued: ${response.user.id}. You can now sign in.`);
+        setSuccessMsg(`✓ Registration Successful! National Patient ID: ${response.user.id}. Your account, password, and Security PIN are set up. You can now log in below.`);
         setEmail(regEmail);
+        setPassword(regPassword);
         setIsRegistering(false);
         setRole('patient');
       }
@@ -420,6 +425,36 @@ export default function LoginPortal({ onLoginSuccess, initialRegister = false }:
                       className="block w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
                       placeholder="e.g. Penicillin, Peanuts"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        Account Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        className="block w-full px-3 py-2 border border-slate-200 rounded-xl text-sm"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                        4-Digit Security PIN
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        required
+                        value={regPin}
+                        onChange={(e) => setRegPin(e.target.value)}
+                        className="block w-full px-3 py-2 border border-slate-200 rounded-xl text-sm tracking-widest text-center font-mono font-bold"
+                        placeholder="1234"
+                      />
+                    </div>
                   </div>
 
                   <button

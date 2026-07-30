@@ -94,6 +94,23 @@ export default function DoctorDashboard({ doctor, onLogout }: DoctorDashboardPro
     Array.isArray(doctor.availability) ? doctor.availability.join(', ') : (doctor.availability || 'Mon-Fri 08:00 - 16:00')
   );
   const [docBio, setDocBio] = useState('Senior Consultant Cardiologist specializing in non-invasive diagnostic electrophysiology & coronary artery disease.');
+  const [docPinInput, setDocPinInput] = useState(doctor.pin || '1234');
+  const [docPasswordInput, setDocPasswordInput] = useState(doctor.password || '123456');
+  const [docPinSaved, setDocPinSaved] = useState(false);
+
+  const handleSaveDoctorSecuritySettings = async () => {
+    try {
+      await api.updateDoctorPin({
+        id: doctor.id,
+        pin: docPinInput,
+        password: docPasswordInput
+      });
+      setDocPinSaved(true);
+      setTimeout(() => setDocPinSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // AI Assistant Panel State
   interface Message {
@@ -1981,23 +1998,61 @@ export default function DoctorDashboard({ doctor, onLogout }: DoctorDashboardPro
               <div>
                 <label className="font-extrabold text-slate-800 block mb-1">Specialty Bio & Credentials</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={docBio}
                   onChange={(e) => setDocBio(e.target.value)}
                   className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-xs text-slate-800"
                 />
               </div>
 
+              {/* Security PIN & Password Setup Block */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-blue-600" /> Account Security PIN & Password
+                  </h4>
+                  {docPinSaved && (
+                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Saved!
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">4-Digit Security PIN</label>
+                    <input 
+                      type="password"
+                      maxLength={4}
+                      value={docPinInput}
+                      onChange={(e) => setDocPinInput(e.target.value)}
+                      placeholder="1234"
+                      className="w-full p-2 border border-slate-200 rounded-lg text-center font-mono font-bold tracking-widest text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-500 uppercase block mb-1">Account Password</label>
+                    <input 
+                      type="password"
+                      value={docPasswordInput}
+                      onChange={(e) => setDocPasswordInput(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full p-2 border border-slate-200 rounded-lg font-bold text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    alert("Doctor profile and clinical availability updated in central hospital registry!");
+                  onClick={async () => {
+                    await handleSaveDoctorSecuritySettings();
+                    alert("Doctor profile and security settings saved successfully!");
                     setShowProfileModal(false);
                   }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3.5 rounded-xl shadow-md shadow-blue-200 cursor-pointer transition-all"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-3 rounded-xl shadow-md shadow-blue-200 cursor-pointer transition-all"
                 >
-                  Save Profile Settings
+                  Save Profile & Security Settings
                 </button>
               </div>
             </div>

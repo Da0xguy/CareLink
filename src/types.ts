@@ -45,6 +45,8 @@ export interface PatientProfile {
   bloodGroup: string;
   allergies: string[];
   mfaEnabled: boolean;
+  pin?: string;
+  password?: string;
   avatarUrl?: string;
   gender?: string;
   hospital?: string;
@@ -63,9 +65,12 @@ export interface DoctorProfile {
   hospitalId: string;
   hospitalName: string;
   availability: string[]; // e.g. ["09:00", "10:00", "11:30", "14:00"]
-  status?: 'active' | 'revoked' | 'suspended' | 'deactivated';
-  firstTimeLogin?: boolean;
+  status?: 'active' | 'revoked' | 'suspended' | 'deactivated' | 'pending_confirmation';
+  pin?: string;
   password?: string;
+  confirmationToken?: string;
+  confirmationStatus?: 'pending' | 'confirmed';
+  firstTimeLogin?: boolean;
   licenseNumber?: string;
   yearsOfExperience?: number;
   qualifications?: string[];
@@ -234,6 +239,11 @@ export interface Department {
   name: string;
   description: string;
   doctorsCount: number;
+  email?: string;
+  password?: string;
+  pin?: string;
+  confirmationToken?: string;
+  status?: 'active' | 'pending_confirmation';
   consultationFee?: number;
   leadDoctor?: string;
   location?: string;

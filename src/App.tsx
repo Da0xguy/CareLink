@@ -9,17 +9,25 @@ import ReceptionDashboard from './components/ReceptionDashboard';
 import LandingPage from './components/LandingPage';
 import RegisterFacilityPage from './components/RegisterFacilityPage';
 import EmergencyMedicalProfileModal from './components/EmergencyMedicalProfileModal';
+import ConfirmPasswordPage from './components/ConfirmPasswordPage';
 
 export default function App() {
   const [role, setRole] = useState<'patient' | 'doctor' | 'lab' | 'admin' | 'reception' | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [view, setView] = useState<'landing' | 'portal' | 'register-facility'>('landing');
+  const [view, setView] = useState<'landing' | 'portal' | 'register-facility' | 'confirm-account'>('landing');
+  const [confirmToken, setConfirmToken] = useState<string>('');
   const [initialRegister, setInitialRegister] = useState<boolean>(false);
   const [urlEmergencyPatient, setUrlEmergencyPatient] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        setConfirmToken(token);
+        setView('confirm-account');
+      }
+
       const pid = params.get('emergencyPatientId');
       if (pid) {
         setUrlEmergencyPatient({
@@ -143,6 +151,14 @@ export default function App() {
               />
             ) : view === 'register-facility' ? (
               <RegisterFacilityPage onBackToLanding={() => setView('landing')} />
+            ) : view === 'confirm-account' ? (
+              <ConfirmPasswordPage 
+                tokenFromUrl={confirmToken}
+                onGoToLogin={() => {
+                  setView('portal');
+                  setRole(null);
+                }}
+              />
             ) : !role ? (
               <LoginPortal 
                 onLoginSuccess={handleLoginSuccess} 

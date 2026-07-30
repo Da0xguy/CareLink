@@ -28,6 +28,8 @@ import {
   LogOut,
   ShieldCheck,
   Building2,
+  KeyRound,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Printer,
@@ -112,6 +114,30 @@ export default function PatientDashboard({ patient: initialPatient, onLogout }: 
 
   // Health Summary PDF Generator State
   const [showHealthSummaryPdfModal, setShowHealthSummaryPdfModal] = useState(false);
+
+  // Security PIN / Password Update State
+  const [patientPinInput, setPatientPinInput] = useState(patient.pin || '1234');
+  const [patientPasswordInput, setPatientPasswordInput] = useState(patient.password || '123456');
+  const [pinUpdateStatus, setPinUpdateStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  const handleUpdatePatientPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await api.updatePatientPin({
+        id: patient.id,
+        pin: patientPinInput,
+        password: patientPasswordInput
+      });
+      if (res.success) {
+        setPinUpdateStatus('success');
+        setTimeout(() => setPinUpdateStatus('idle'), 4000);
+      } else {
+        setPinUpdateStatus('error');
+      }
+    } catch (err) {
+      setPinUpdateStatus('error');
+    }
+  };
   const [summarySpecialistNote, setSummarySpecialistNote] = useState('');
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -1996,6 +2022,66 @@ This clinical report is an official medical document generated for printing and 
                     </div>
                   </>
                 )}
+              </div>
+
+              {/* Security PIN & Password Settings Card */}
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-blue-600" /> Account Security PIN & Password
+                    </h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Set and manage your 4-digit PIN used for consultation verification and account password.</p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdatePatientPin} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-bold text-xs">4-Digit Security PIN</label>
+                      <input 
+                        type="password" 
+                        maxLength={4}
+                        required
+                        value={patientPinInput} 
+                        onChange={(e) => setPatientPinInput(e.target.value)}
+                        placeholder="1234"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 font-mono font-bold text-center tracking-widest text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-slate-500 font-bold text-xs">Account Password</label>
+                      <input 
+                        type="password" 
+                        required
+                        value={patientPasswordInput} 
+                        onChange={(e) => setPatientPasswordInput(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="submit"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold px-5 py-2.5 rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      <span>Update Security PIN & Password</span>
+                    </button>
+                    {pinUpdateStatus === 'success' && (
+                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" /> PIN & Password Saved!
+                      </span>
+                    )}
+                    {pinUpdateStatus === 'error' && (
+                      <span className="text-xs font-bold text-red-600">
+                        Failed to update. Try again.
+                      </span>
+                    )}
+                  </div>
+                </form>
               </div>
 
               {/* Pre-Configured Emergency Contacts Card */}

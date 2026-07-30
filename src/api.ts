@@ -58,6 +58,44 @@ export const api = {
       body: JSON.stringify(payload)
     }, { success: true, user: payload as any }),
 
+  updatePatientPin: (payload: { id: string; pin?: string; password?: string }) =>
+    safeFetch<{ success: boolean; message: string; user?: any }>('/api/patient/update-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: true, message: 'Security PIN updated locally' }),
+
+  updateDoctorPin: (payload: { id: string; pin?: string; password?: string }) =>
+    safeFetch<{ success: boolean; message: string; user?: any }>('/api/doctor/update-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: true, message: 'Doctor PIN updated locally' }),
+
+  adminCreateDoctor: (payload: { name: string; email: string; phone?: string; specialty?: string; department?: string }) =>
+    safeFetch<{ success: boolean; message: string; doctor?: any; pendingConfirmation?: any; confirmationLink?: string }>('/api/admin/create-doctor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: false, message: 'Failed to dispatch confirmation email' }),
+
+  adminCreateDepartment: (payload: { name: string; description?: string; email: string; leadDoctor?: string; consultationFee?: number | string; location?: string; operatingHours?: string; maxDailySlots?: number | string }) =>
+    safeFetch<{ success: boolean; message: string; department?: any; pendingConfirmation?: any; confirmationLink?: string }>('/api/admin/create-department', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: false, message: 'Failed to create department portal' }),
+
+  getPendingConfirmations: () =>
+    safeFetch<{ success: boolean; pendingConfirmations: any[] }>('/api/admin/pending-confirmations', undefined, { success: true, pendingConfirmations: [] }),
+
+  confirmSetPassword: (payload: { email?: string; token?: string; password?: string; pin?: string; newPassword?: string; newPin?: string }) =>
+    safeFetch<{ success: boolean; message: string; user?: any; department?: any; account?: any; role?: string }>('/api/auth/confirm-set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }, { success: false, message: 'Server unavailable' }),
+
 
   // Appointments
   getAppointments: (params?: { patientId?: string; doctorId?: string }) => {

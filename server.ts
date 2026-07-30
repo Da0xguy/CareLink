@@ -1,8 +1,17 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  getDocs, 
+  doc, 
+  setDoc
+} from 'firebase/firestore';
 import { 
   PatientProfile, 
   DoctorProfile, 
@@ -36,6 +45,30 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Initialize Firebase App & Firestore Database
+let db: ReturnType<typeof getFirestore> | null = null;
+try {
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  if (fs.existsSync(configPath)) {
+    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    const fbApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    db = getFirestore(fbApp, firebaseConfig.firestoreDatabaseId || '(default)');
+    console.log('[Firebase] Connected to Firestore database:', firebaseConfig.projectId);
+  }
+} catch (err) {
+  console.error('[Firebase] Error initializing Firestore:', err);
+}
+
+// Asynchronous helper to update Firestore
+async function saveToFirestore(collectionName: string, id: string, data: any) {
+  if (!db) return;
+  try {
+    await setDoc(doc(db, collectionName, id), JSON.parse(JSON.stringify(data)), { merge: true });
+  } catch (err) {
+    console.error(`[Firestore Error] Failed to save to ${collectionName}/${id}:`, err);
+  }
+}
 
 // Initial State Databases
 let patients: PatientProfile[] = [
@@ -680,40 +713,116 @@ if (process.env.GEMINI_API_KEY) {
   });
 }
 
+// Pending Confirmations Store for Admin Created Doctors & Departments
+interface PendingConfirmation {
+  id: string;
+  token: string;
+  role: 'doctor' | 'department';
+  name: string;
+  email: string;
+  department?: string;
+  createdAt: string;
+  status: 'pending' | 'confirmed';
+}
+let pendingConfirmations: PendingConfirmation[] = [];
+
+// Initialize collections from Firestore
+async function initFirestoreCollections() {
+  if (!db) return;
+  try {
+    const patSnap = await getDocs(collection(db, 'patients'));
+    if (!patSnap.empty) {
+      patients = patSnap.docs.map(d => d.data() as PatientProfile);
+    } else {
+      for (const p of patients) {
+        await saveToFirestore('patients', p.id, p);
+      }
+    }
+
+    const docSnap = await getDocs(collection(db, 'doctors'));
+    if (!docSnap.empty) {
+      doctors = docSnap.docs.map(d => d.data() as DoctorProfile);
+    } else {
+      for (const d of doctors) {
+        await saveToFirestore('doctors', d.id, d);
+      }
+    }
+
+    const deptSnap = await getDocs(collection(db, 'departments'));
+    if (!deptSnap.empty) {
+      departments = deptSnap.docs.map(d => d.data() as Department);
+    } else {
+      for (const dept of departments) {
+        await saveToFirestore('departments', dept.id, dept);
+      }
+    }
+
+    const pendSnap = await getDocs(collection(db, 'pendingConfirmations'));
+    if (!pendSnap.empty) {
+      pendingConfirmations = pendSnap.docs.map(d => d.data() as PendingConfirmation);
+    }
+
+    console.log('[Firebase] Synchronized collections with Firestore. Loaded', patients.length, 'patients,', doctors.length, 'doctors.');
+  } catch (err) {
+    console.error('[Firebase] Error initializing collections from Firestore:', err);
+  }
+}
+
+initFirestoreCollections();
+
 // REST APIs
 // AUTH
 app.post('/api/auth/login', (req, res) => {
   const { email, password, role } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+
   if (role === 'patient') {
-    const patient = patients.find(p => p.email === email || email === 'samuel@example.com');
+    const patient = patients.find(p => 
+      p.email.toLowerCase() === cleanEmail || 
+      p.id.toLowerCase() === cleanEmail || 
+      cleanEmail === 'samuel@example.com'
+    );
     if (patient) {
+      if (patient.password && password && patient.password !== password) {
+        return res.status(401).json({ success: false, message: "Incorrect password for this patient account." });
+      }
       return res.json({ success: true, role, user: patient });
     }
   } else if (role === 'doctor') {
-    const doc = doctors.find(d => d.email === email || email === 'johnson@hospital.org');
+    const doc = doctors.find(d => 
+      d.email.toLowerCase() === cleanEmail || 
+      d.id.toLowerCase() === cleanEmail || 
+      cleanEmail === 'johnson@hospital.org'
+    );
     if (doc) {
       if (doc.status === 'revoked') {
         return res.status(403).json({ success: false, message: "Doctor access revoked by facility administrator. Contact credentials office." });
       }
+      if (doc.status === 'pending_confirmation') {
+        return res.status(403).json({ success: false, message: "Account pending email confirmation. Please check confirmation email to set password." });
+      }
+      if (doc.password && password && doc.password !== password) {
+        return res.status(401).json({ success: false, message: "Incorrect password for doctor account." });
+      }
       return res.json({ success: true, role, user: doc });
     }
   } else if (role === 'lab') {
-    const staff = labStaff[0];
+    const staff = labStaff.find(s => s.email.toLowerCase() === cleanEmail) || labStaff[0];
     if (staff) {
       return res.json({ success: true, role, user: staff });
     }
   } else if (role === 'admin') {
-    const admin = admins[0];
+    const admin = admins.find(a => a.email.toLowerCase() === cleanEmail) || admins[0];
     if (admin) {
       return res.json({ success: true, role, user: admin });
     }
   } else if (role === 'reception') {
-    const staff = receptionStaff[0];
+    const staff = receptionStaff.find(r => r.email.toLowerCase() === cleanEmail) || receptionStaff[0];
     if (staff) {
       return res.json({ success: true, role, user: staff });
     }
   }
-  res.status(401).json({ success: false, message: "Invalid credentials or missing role parameters." });
+  res.status(401).json({ success: false, message: "Invalid credentials or missing account matching email/ID." });
 });
 
 // RECEPTION WORKFLOW APIS
@@ -941,7 +1050,7 @@ app.post('/api/doctor/start-consultation', (req, res) => {
 });
 
 app.post('/api/auth/register', (req, res) => {
-  const { name, email, phone, role, age, bloodGroup, allergies, specialty, department } = req.body;
+  const { name, email, phone, role, age, bloodGroup, allergies, specialty, department, password, pin } = req.body;
   if (role === 'patient') {
     const newId = `NID-${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}`;
     const newPatient: PatientProfile = {
@@ -951,10 +1060,25 @@ app.post('/api/auth/register', (req, res) => {
       phone,
       age: Number(age) || 30,
       bloodGroup: bloodGroup || "O+",
-      allergies: allergies ? allergies.split(',').map((s: string) => s.trim()) : [],
-      mfaEnabled: true
+      allergies: allergies ? (Array.isArray(allergies) ? allergies : allergies.split(',').map((s: string) => s.trim())) : [],
+      mfaEnabled: true,
+      password: password || "123",
+      pin: pin || "1234"
     };
     patients.push(newPatient);
+    saveToFirestore('patients', newId, newPatient);
+
+    // Audit log
+    auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      patientId: newId,
+      actorName: name,
+      actorRole: 'patient',
+      action: `Self-registered new patient account with ID ${newId}`,
+      timestamp: new Date().toISOString(),
+      status: 'Success'
+    });
+
     return res.json({ success: true, user: newPatient });
   } else if (role === 'doctor') {
     const newId = `DOC-${Math.floor(100 + Math.random() * 900)}`;
@@ -967,12 +1091,227 @@ app.post('/api/auth/register', (req, res) => {
       department: department || "General Outpatients",
       hospitalId: "HOSP-01",
       hospitalName: "General Hospital Abuja",
-      availability: ["09:00", "10:30", "13:00", "15:30"]
+      availability: ["09:00", "10:30", "13:00", "15:30"],
+      password: password || "123",
+      pin: pin || "1234",
+      status: 'active'
     };
     doctors.push(newDoctor);
+    saveToFirestore('doctors', newId, newDoctor);
     return res.json({ success: true, user: newDoctor });
   }
   res.status(400).json({ success: false, message: "Invalid registration parameters." });
+});
+
+// UPDATE SECURITY PIN / PASSWORD ENDPOINTS
+app.post('/api/patient/update-pin', (req, res) => {
+  const { id, pin, password } = req.body;
+  const patient = patients.find(p => p.id === id);
+  if (patient) {
+    if (pin) patient.pin = pin;
+    if (password) patient.password = password;
+    saveToFirestore('patients', patient.id, patient);
+
+    auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      patientId: patient.id,
+      actorName: patient.name,
+      actorRole: 'patient',
+      action: `Updated profile Security PIN / Password`,
+      timestamp: new Date().toISOString(),
+      status: 'Success'
+    });
+
+    return res.json({ success: true, message: "Security PIN / Password updated successfully!", user: patient });
+  }
+  res.status(404).json({ success: false, message: "Patient record not found." });
+});
+
+app.post('/api/doctor/update-pin', (req, res) => {
+  const { id, pin, password } = req.body;
+  const doc = doctors.find(d => d.id === id);
+  if (doc) {
+    if (pin) doc.pin = pin;
+    if (password) doc.password = password;
+    saveToFirestore('doctors', doc.id, doc);
+
+    auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      patientId: 'SYS-DOC',
+      actorName: doc.name,
+      actorRole: 'doctor',
+      action: `Dr. ${doc.name} updated profile Security PIN / Password`,
+      timestamp: new Date().toISOString(),
+      status: 'Success'
+    });
+
+    return res.json({ success: true, message: "Doctor Security PIN / Password updated successfully!", user: doc });
+  }
+  res.status(404).json({ success: false, message: "Doctor record not found." });
+});
+
+// ADMIN WORKFLOW: CREATE DOCTOR / DEPARTMENT WITH CONFIRMATION EMAIL & PASSWORD SETTING
+app.post('/api/admin/create-doctor', (req, res) => {
+  const { name, email, phone, specialty, department } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ success: false, message: "Doctor Name and Email are required." });
+  }
+  const newId = `DOC-${Math.floor(100 + Math.random() * 900)}`;
+  const token = `CONF-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const newDoc: DoctorProfile = {
+    id: newId,
+    name,
+    email,
+    phone: phone || "+234 800 000 0000",
+    specialty: specialty || "General Practitioner",
+    department: department || "General Outpatients",
+    hospitalId: "HOSP-01",
+    hospitalName: "General Hospital Abuja",
+    availability: ["09:00", "10:30", "13:00", "15:30"],
+    status: 'pending_confirmation',
+    confirmationToken: token,
+    confirmationStatus: 'pending'
+  };
+  doctors.push(newDoc);
+  saveToFirestore('doctors', newId, newDoc);
+
+  const pendingItem: PendingConfirmation = {
+    id: newId,
+    token,
+    role: 'doctor',
+    name,
+    email,
+    department: department || specialty,
+    createdAt: new Date().toLocaleString(),
+    status: 'pending'
+  };
+  pendingConfirmations.unshift(pendingItem);
+  saveToFirestore('pendingConfirmations', newId, pendingItem);
+
+  notifications.unshift({
+    id: `NTF-${Date.now()}`,
+    userId: 'ADMIN',
+    title: `Confirmation Email Sent to Dr. ${name}`,
+    message: `Account created for Dr. ${name} (${email}). Confirmation link dispatched: token [${token}]. Awaiting password setup.`,
+    date: "Just now",
+    type: 'admin',
+    read: false
+  });
+
+  res.json({
+    success: true,
+    message: `Confirmation email dispatched to ${email}. The doctor can set password using token [${token}].`,
+    doctor: newDoc,
+    pendingConfirmation: pendingItem
+  });
+});
+
+app.post('/api/admin/create-department', (req, res) => {
+  const { name, description, email, leadDoctor, consultationFee } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ success: false, message: "Department Name and Portal Admin Email are required." });
+  }
+
+  const newId = `DEPT-${Math.floor(100 + Math.random() * 900)}`;
+  const token = `CONF-DEPT-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  const newDept: Department = {
+    id: newId,
+    name,
+    description: description || "Specialized clinical department",
+    doctorsCount: 1,
+    email,
+    status: 'pending_confirmation',
+    confirmationToken: token,
+    leadDoctor: leadDoctor || "Department Head",
+    consultationFee: Number(consultationFee) || 5000
+  };
+  departments.push(newDept);
+  saveToFirestore('departments', newId, newDept);
+
+  const pendingItem: PendingConfirmation = {
+    id: newId,
+    token,
+    role: 'department',
+    name,
+    email,
+    department: name,
+    createdAt: new Date().toLocaleString(),
+    status: 'pending'
+  };
+  pendingConfirmations.unshift(pendingItem);
+  saveToFirestore('pendingConfirmations', newId, pendingItem);
+
+  res.json({
+    success: true,
+    message: `Department portal account created. Confirmation email sent to ${email} with password setup link [${token}].`,
+    department: newDept,
+    pendingConfirmation: pendingItem
+  });
+});
+
+app.get('/api/admin/pending-confirmations', (req, res) => {
+  res.json({ success: true, pendingConfirmations });
+});
+
+app.post('/api/auth/confirm-set-password', (req, res) => {
+  const { email, token, password, pin } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+
+  // Find in pending confirmations or doctors/departments
+  const doc = doctors.find(d => 
+    d.email.toLowerCase() === cleanEmail || 
+    d.confirmationToken === token
+  );
+
+  if (doc) {
+    doc.password = password || "123456";
+    doc.pin = pin || "1234";
+    doc.status = 'active';
+    doc.confirmationStatus = 'confirmed';
+    saveToFirestore('doctors', doc.id, doc);
+
+    const pItem = pendingConfirmations.find(p => p.email.toLowerCase() === cleanEmail || p.token === token);
+    if (pItem) {
+      pItem.status = 'confirmed';
+      saveToFirestore('pendingConfirmations', pItem.id, pItem);
+    }
+
+    auditLogs.unshift({
+      id: `AUD-${Date.now()}`,
+      patientId: 'SYS-DOC',
+      actorName: doc.name,
+      actorRole: 'doctor',
+      action: `Confirmed account via email link and set password/PIN`,
+      timestamp: new Date().toISOString(),
+      status: 'Success'
+    });
+
+    return res.json({ success: true, message: "Password and Security PIN set successfully! You can now log in.", role: 'doctor', user: doc });
+  }
+
+  const dept = departments.find(d => 
+    (d.email && d.email.toLowerCase() === cleanEmail) || 
+    d.confirmationToken === token
+  );
+
+  if (dept) {
+    dept.password = password || "123456";
+    dept.pin = pin || "1234";
+    dept.status = 'active';
+    saveToFirestore('departments', dept.id, dept);
+
+    const pItem = pendingConfirmations.find(p => p.email.toLowerCase() === cleanEmail || p.token === token);
+    if (pItem) {
+      pItem.status = 'confirmed';
+      saveToFirestore('pendingConfirmations', pItem.id, pItem);
+    }
+
+    return res.json({ success: true, message: "Department Portal Administrator password set successfully!", department: dept });
+  }
+
+  res.status(404).json({ success: false, message: "Invalid confirmation token or account email. Please verify link details." });
 });
 
 // PATIENT PROFILE UPDATE
