@@ -2579,9 +2579,10 @@ app.post('/api/gemini/assistant', async (req, res) => {
   const { prompt, patientId } = req.body;
   
   if (!ai) {
-    return res.json({ 
-      success: true, 
-      text: "### Gemma 4 Medical Intelligence (Offline Mode)\n\nThe Gemma 4 Medical Assistant is currently in offline sandbox support mode (GEMINI_API_KEY secret not detected).\n\n**Standard Clinical Guidance:**\n1. Verify prescription dosages against patient weight and history of allergies (e.g., Penicillin).\n2. Correlate diagnostic ECG wave telemetry with serum electrolyte panels.\n3. Implement localized care protocols in line with national medical informatics clinical guidelines." 
+    console.warn("[Gemini AI] GEMINI_API_KEY missing or AI client not initialized.");
+    return res.status(503).json({
+      success: false,
+      message: "AI service unavailable. Please contact system administrator."
     });
   }
 
