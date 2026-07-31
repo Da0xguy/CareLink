@@ -455,7 +455,11 @@ export default function PatientEHRProfile({
     setAiLoading(true);
     try {
       const res = await api.askAiAssistant({ prompt: aiPrompt, patientId });
-      setAiResponse(res.text);
+      setAiResponse(
+        res.success
+          ? res.text
+          : res.message || "AI service unavailable. Please try again later.",
+      );
     } catch (err) {
       setAiResponse("AI service unavailable. Please try again later.");
     } finally {

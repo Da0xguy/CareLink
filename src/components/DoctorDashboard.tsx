@@ -554,7 +554,8 @@ export default function DoctorDashboard({
         sender: "ai",
         text: response.success
           ? response.text
-          : "We encountered an issue retrieving clinical guidance. Please try again.",
+          : response.message ||
+            "We encountered an issue retrieving clinical guidance. Please try again.",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",

@@ -209,7 +209,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }, { success: true, text: 'Clinical AI Decision Support: Review patient records, verify medication contraindications, and monitor vital trends closely.' }),
+    }, { success: false, text: '', message: 'AI service unavailable. Please try again later.' }),
 
   // Admin Setup
   getAdminStats: () => safeFetch<any>('/api/admin/stats', undefined, { totalPatients: 25420, doctorsCount: 184, appointmentsToday: 640, completedConsultations: "1,420", availableDoctors: 76, pendingRequests: 18 }),
