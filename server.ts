@@ -30,6 +30,7 @@ import {
 } from './src/types.js';
 
 dotenv.config();
+console.log('[Env Check] GEMINI_API_KEY present on startup:', Boolean(process.env.GEMINI_API_KEY));
 
 const app = express();
 const PORT = 3000;
